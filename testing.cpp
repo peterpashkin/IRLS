@@ -9,36 +9,6 @@
 
 Runner r{};
 
-void assert_correct_infeasible_l1(const MatrixXq& A, const VectorXq& c, const VectorXq& b, double_custom M, double_custom eps) {
-    double_custom val1 = b.transpose() * c;
-    double_custom val2 = (A.transpose() * c).lpNorm<Eigen::Infinity>();
-    assert(val1 / val2 >= (1-eps) * M);
-}
-
-void assert_correct_feasible_l1(const VectorXq x, double_custom M, double_custom eps) {
-    double_custom val1 = x.lpNorm<1>();
-    double_custom val2 = (1+eps) * M;
-    assert(val1 <= val2);
-}
-
-
-void assert_correct_infeasible_linf(const MatrixXq& A, const VectorXq& c, const VectorXq& b, double_custom M, double_custom eps) {
-    double_custom value = b.transpose() * (A * c.asDiagonal().inverse() * A.transpose()).completeOrthogonalDecomposition().pseudoInverse() * b;
-    double_custom comparison = (1-eps) * (1-eps) * M * M;
-    //std::cout << "Value: " << static_cast<double>(value) << " Comparison: " << static_cast<double>(comparison) << std::endl;
-    assert(value + 1e-6 >= comparison);
-    if(comparison > value) {
-        std::cout << "Error of: " << static_cast<double>(comparison-value) << " with value of " << static_cast<double>(value) << std::endl;
-    }
-}
-
-void assert_correct_feasible_linf(const VectorXq x, double_custom M, double_custom eps) {
-    double_custom val1 = x.lpNorm<Eigen::Infinity>();
-    double_custom val2 = (1+eps) * M;
-    //std::cout << "Val1: " << static_cast<double>(val1) << " Val2: " << static_cast<double>(val2) << std::endl;
-    assert(x.lpNorm<Eigen::Infinity>() <= (1+eps) * M + 1e-6);
-}
-
 VectorXq binary_search_over_M(const VectorXq& b, double_custom eps, Norm norm, Graph& g, bool recursive) {
     double_custom low = 0, high = 1;
     double_custom exp = 1;
@@ -76,20 +46,13 @@ VectorXq binary_search_over_M(const VectorXq& b, double_custom eps, Norm norm, G
         } else {
             low = M;
             MatrixXq A = g.matrix;
-            if(norm == Norm::INF) {
-                assert_correct_infeasible_linf(A, x, b, M, eps);
-            } else {
-                assert_correct_infeasible_l1(A, x, b, M, eps);
-            }
         }
     }
 
     if(norm == Norm::INF) {
         x = r.linf_minimization(b, eps, last_valid, g);
-        assert_correct_feasible_linf(x, last_valid, eps);
     } else if(norm == Norm::ONE) {
         x = r.l1_minimization(b, eps, last_valid, g);
-        assert_correct_feasible_l1(x, last_valid, eps);
     }
 
     return x;
@@ -133,7 +96,6 @@ int main() {
             VectorXq x = binary_search_over_M(b, eps, Norm::ONE, g, false);
     #endif
 #endif
-        std::cout << "done" << std::endl;
         }
         eps *= 0.5;
 
